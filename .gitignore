@@ -1,0 +1,9 @@
+*.ico
+
+*.png
+
+*.jpg
+
+*.user
+
+/build/
