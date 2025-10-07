@@ -5,8 +5,8 @@
 QVector<FormatPreset> preset =
 {
     FormatPreset("custom", "", ""),
-    FormatPreset("activity", "$1_$2_$d3", "Date: %MMdd, Name: 姓名", TYPE_PIC | TYPE_VID, ""),
-    FormatPreset("artwork", "+$1_$2", "Date: %yyMMdd, Catagory: 组名", TYPE_PIC, "")
+    FormatPreset("activity", "\\1_\\2_\\d3", "Date: %MMdd, Name: 姓名", TYPE_PIC | TYPE_VID, ""),
+    FormatPreset("artwork", "*\\1_\\2", "Date: %yyMMdd, Catagory: 组名", TYPE_PIC, "")
 };
 
 Widget::Widget(QWidget *parent)

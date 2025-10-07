@@ -29,7 +29,8 @@ private:
     enum class PlaceholderType
     {
         Regular,    // 普通占位符，如 $1, $2
-        Numbered    // 数字占位符，如 $d3
+        Numbered,   // 数字占位符，如 $d3
+        RegularExpression // 正则表达式替换结果
     };
 
     // 重命名模式
@@ -38,7 +39,8 @@ private:
         Regular,    // 普通重命名
         Strict,     // 严格重命名
         Prepend,    // 前置重命名
-        Append      // 后置重命名
+        Append,     // 后置重命名
+        RegularExpression // 正则表达式重命名
     };
 
     // 占位符结构

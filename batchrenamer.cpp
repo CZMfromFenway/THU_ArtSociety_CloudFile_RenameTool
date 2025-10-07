@@ -25,7 +25,7 @@ QString BatchRenamer::renameFiles(const QString& format, const QVector<QString> 
     int regularPlaceholders = 0;
     for(const auto& ph : parsed.placeholders)
     {
-        if(ph.type == PlaceholderType::Regular) { regularPlaceholders++; }
+        if(ph.type == PlaceholderType::Regular || ph.type == PlaceholderType::RegularExpression) { regularPlaceholders++; }
     }
     if(regularPlaceholders != replacements.size())
     {
@@ -82,17 +82,33 @@ BatchRenamer::ParsedFormat BatchRenamer::parseFormat(const QString& format)
 {
     ParsedFormat result;
     // 先判断重命名模式
-    if(format.front() == "+" && format.back() == "+")
+    if(format.front() == '?')
+    {
+        result.mode = RenameMode::RegularExpression;
+        result.rawFormat = format.mid(1);
+        if(QRegularExpression(result.rawFormat).isValid())
+        {
+            Placeholder ph;
+            ph.type = PlaceholderType::RegularExpression;
+            ph.index = 1;
+            ph.position = 0;
+            ph.length = 1;
+            result.placeholders.append(ph);
+            result.hasNumberPlaceholder = false;
+        }
+        return result;
+    }
+    if(format.front() == '*' && format.back() == '*')
     {
         result.mode = RenameMode::Strict;
     }
     else
-        if(format.front() == '+')
+        if(format.front() == '*')
         {
             result.mode = RenameMode::Append;
         }
         else
-            if(format.back() == "+")
+            if(format.back() == '*')
             {
                 result.mode = RenameMode::Prepend;
             }
@@ -101,9 +117,9 @@ BatchRenamer::ParsedFormat BatchRenamer::parseFormat(const QString& format)
                 result.mode = RenameMode::Regular;
             }
     result.rawFormat = format;
-    result.rawFormat.remove('+');
+    result.rawFormat.remove('*');
     // 再搜索占位符
-    QRegularExpression regex(R"(\$(\d+)|(\$d(\d+)))");
+    QRegularExpression regex(R"(\\(\d+)|(\\d(\d+)))");
     auto matches = regex.globalMatch(result.rawFormat);
     while(matches.hasNext())
     {
@@ -131,6 +147,9 @@ BatchRenamer::ParsedFormat BatchRenamer::parseFormat(const QString& format)
 QString BatchRenamer::buildRegexPattern(const ParsedFormat& parsed, const QVector<QString> &replacements, bool strictMode)
 {
     QString pattern = parsed.rawFormat;
+    // 如果格式的类型就是正则表达式，那么构建的正则表达式就是它本身
+    if(parsed.mode == RenameMode::RegularExpression)
+    { return pattern; }
     // 从后向前替换，避免位置变化影响
     for(int i = parsed.placeholders.size() - 1; i >= 0; i--)
     {
@@ -234,6 +253,8 @@ bool BatchRenamer::matchesFormat(const QString& fileName, const ParsedFormat& pa
     QFileInfo info(fileName);
     QString baseName = info.completeBaseName(); // 包含所有点号的基本名称
     QRegularExpressionMatch match = regex.match(baseName);
+    if(parsed.mode == RenameMode::RegularExpression)
+    { return !match.hasMatch(); }
     return match.hasMatch();
 }
 
@@ -271,6 +292,13 @@ int BatchRenamer::extractNumber(const QString& fileName, const ParsedFormat& par
 QString BatchRenamer::generateFileName(const QString& oldName, const ParsedFormat& parsed,
                                        const QVector<QString> &replacements, int number)
 {
+    if(parsed.mode == RenameMode::RegularExpression)
+    {
+        QRegularExpression regex(parsed.rawFormat);
+        QFileInfo info(oldName);
+        QString result = info.baseName().replace(regex, replacements.front()) + '.' + info.suffix();
+        return result;
+    }
     QString result = parsed.rawFormat;
     // 从后向前替换，避免位置变化影响
     for(int i = parsed.placeholders.size() - 1; i >= 0; i--)
